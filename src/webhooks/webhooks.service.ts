@@ -23,7 +23,10 @@ export class WebhooksService {
 
   // Verify Webhook Challenge from Meta
   verifyChallenge(mode: string, token: string, challenge: string): string | null {
-    const expectedToken = process.env.META_WEBHOOK_VERIFY_TOKEN || 'whatsapp_webhook_verify_token_secure_123';
+    const expectedToken =
+      process.env.WHATSAPP_VERIFY_TOKEN ||
+      process.env.META_WEBHOOK_VERIFY_TOKEN ||
+      'whatsapp_webhook_verify_token_secure_123';
     if (mode === 'subscribe' && token === expectedToken) {
       this.logger.log('Meta Webhook Challenge successfully verified');
       return challenge;

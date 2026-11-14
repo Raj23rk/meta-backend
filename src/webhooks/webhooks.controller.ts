@@ -11,12 +11,16 @@ import {
 import { Response } from 'express';
 import { WebhooksService } from './webhooks.service';
 
-@Controller('webhooks')
+@Controller(['webhooks', 'whatsapp', 'v1/whatsapp'])
 export class WebhooksController {
   constructor(private readonly webhooksService: WebhooksService) {}
 
-  // Meta Webhook Verification endpoint (GET /api/webhooks/whatsapp)
-  @Get('whatsapp')
+  // Meta Webhook Verification endpoint
+  // Matches:
+  // - GET /api/webhooks/whatsapp
+  // - GET /api/whatsapp/webhook
+  // - GET /api/v1/whatsapp/webhook
+  @Get(['whatsapp', 'webhook'])
   verifyWebhook(
     @Query('hub.mode') mode: string,
     @Query('hub.verify_token') token: string,
@@ -30,8 +34,12 @@ export class WebhooksController {
     return res.status(HttpStatus.FORBIDDEN).send('Verification failed');
   }
 
-  // Meta Inbound Webhook Event handler (POST /api/webhooks/whatsapp)
-  @Post('whatsapp')
+  // Meta Inbound Webhook Event handler
+  // Matches:
+  // - POST /api/webhooks/whatsapp
+  // - POST /api/whatsapp/webhook
+  // - POST /api/v1/whatsapp/webhook
+  @Post(['whatsapp', 'webhook'])
   @HttpCode(HttpStatus.OK)
   async handleWebhook(@Body() payload: any) {
     await this.webhooksService.processEvent(payload);
