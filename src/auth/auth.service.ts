@@ -41,6 +41,7 @@ export class AuthService {
     const memberships = await this.membershipModel
       .find({ userId: user._id })
       .populate('organizationId')
+      .lean()
       .exec();
 
     const organizations = memberships.map((m: any) => ({
@@ -120,7 +121,7 @@ export class AuthService {
   }
 
   async getProfile(userId: string) {
-    const user = await this.userModel.findById(userId).select('-passwordHash');
+    const user: any = await this.userModel.findById(userId).select('-passwordHash').lean();
     if (!user) {
       throw new UnauthorizedException('User not found');
     }
@@ -128,6 +129,7 @@ export class AuthService {
     const memberships = await this.membershipModel
       .find({ userId: user._id })
       .populate('organizationId')
+      .lean()
       .exec();
 
     const organizations = memberships.map((m: any) => ({

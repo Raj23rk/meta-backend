@@ -28,4 +28,5 @@ export class WhatsAppAccount {
 }
 
 export const WhatsAppAccountSchema = SchemaFactory.createForClass(WhatsAppAccount);
+WhatsAppAccountSchema.index({ organizationId: 1 });
 

@@ -20,24 +20,27 @@ export class CampaignsService {
     return this.campaignModel
       .find({ organizationId: orgObjId })
       .populate('templateId')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
   }
 
   async findOne(organizationId: string, id: string) {
     const orgObjId = new Types.ObjectId(organizationId);
-    const campaign = await this.campaignModel
+    const campaign: any = await this.campaignModel
       .findOne({ _id: new Types.ObjectId(id), organizationId: orgObjId })
-      .populate('templateId');
+      .populate('templateId')
+      .lean();
 
     if (!campaign) throw new NotFoundException('Campaign not found');
 
     const recipients = await this.recipientModel
       .find({ campaignId: campaign._id })
       .populate('contactId')
-      .limit(100);
+      .limit(100)
+      .lean();
 
     return {
-      ...campaign.toObject(),
+      ...campaign,
       recipients,
     };
   }

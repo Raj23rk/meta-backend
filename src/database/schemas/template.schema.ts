@@ -68,3 +68,5 @@ export class Template {
 
 export const TemplateSchema = SchemaFactory.createForClass(Template);
 TemplateSchema.index({ organizationId: 1, name: 1, language: 1 }, { unique: true });
+TemplateSchema.index({ organizationId: 1, createdAt: -1 });
+TemplateSchema.index({ organizationId: 1, status: 1 });

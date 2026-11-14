@@ -36,31 +36,37 @@ export class ConversationsService {
       { $sort: { 'latestMessage.timestamp': -1 } },
     ]);
 
-    // Populate contact info
-    const populated = await Promise.all(
-      threads.map(async (t) => {
-        const contact = await this.contactModel.findById(t._id);
-        return {
-          contactId: t._id.toString(),
-          contact: contact
-            ? {
-                id: contact._id.toString(),
-                name: contact.name,
-                phone: contact.phone,
-                optOut: contact.optOut,
-              }
-            : {
-                id: t._id.toString(),
-                name: 'Unknown Contact',
-                phone: t.latestMessage?.phoneNumberId || '',
-                optOut: false,
-              },
-          latestMessage: t.latestMessage,
-          unreadCount: t.unreadCount,
-          totalMessages: t.totalMessages,
-        };
-      }),
-    );
+    // Batch-populate contact info in 1 single fast indexed query
+    const contactIds = threads.map((t) => t._id).filter(Boolean);
+    const contacts = await this.contactModel
+      .find({ _id: { $in: contactIds } })
+      .select('name phone optOut')
+      .lean();
+
+    const contactMap = new Map<string, any>(contacts.map((c: any) => [c._id.toString(), c]));
+
+    const populated = threads.map((t) => {
+      const contact = contactMap.get(t._id?.toString());
+      return {
+        contactId: t._id.toString(),
+        contact: contact
+          ? {
+              id: contact._id.toString(),
+              name: contact.name,
+              phone: contact.phone,
+              optOut: contact.optOut,
+            }
+          : {
+              id: t._id.toString(),
+              name: 'Unknown Contact',
+              phone: t.latestMessage?.phoneNumberId || '',
+              optOut: false,
+            },
+        latestMessage: t.latestMessage,
+        unreadCount: t.unreadCount,
+        totalMessages: t.totalMessages,
+      };
+    });
 
     return populated;
   }
@@ -72,7 +78,8 @@ export class ConversationsService {
 
     return this.messageModel
       .find({ organizationId: orgObjId, contactId: contactObjId })
-      .sort({ timestamp: 1 });
+      .sort({ timestamp: 1 })
+      .lean();
   }
 
   // Agent sends a direct reply in the live chat

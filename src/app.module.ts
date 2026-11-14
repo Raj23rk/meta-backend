@@ -22,7 +22,14 @@ dotenv.config();
 
 @Module({
   imports: [
-    MongooseModule.forRoot(process.env.MONGODB_URI || 'mongodb://localhost:27017/whatsapp_saas'),
+    MongooseModule.forRoot(process.env.MONGODB_URI || 'mongodb://localhost:27017/whatsapp_saas', {
+      maxPoolSize: 50,
+      minPoolSize: 10,
+      socketTimeoutMS: 45000,
+      serverSelectionTimeoutMS: 10000,
+      family: 4,
+      autoIndex: true,
+    }),
     AuthModule,
     OrganizationsModule,
     MembershipsModule,

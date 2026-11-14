@@ -47,4 +47,8 @@ export class Contact {
 
 export const ContactSchema = SchemaFactory.createForClass(Contact);
 ContactSchema.index({ organizationId: 1, phone: 1 }, { unique: true });
+ContactSchema.index({ organizationId: 1, createdAt: -1 });
+ContactSchema.index({ organizationId: 1, optOut: 1, consentStatus: 1 });
+ContactSchema.index({ organizationId: 1, tags: 1 });
+ContactSchema.index({ organizationId: 1, group: 1 });
 

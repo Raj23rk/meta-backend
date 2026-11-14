@@ -36,7 +36,7 @@ export class ContactsService {
       filter.consentStatus = query.consent;
     }
 
-    return this.contactModel.find(filter).sort({ createdAt: -1 });
+    return this.contactModel.find(filter).sort({ createdAt: -1 }).lean();
   }
 
   async getTags(organizationId: string): Promise<string[]> {
@@ -58,7 +58,7 @@ export class ContactsService {
 
   async getSegments(organizationId: string) {
     const orgObjId = new Types.ObjectId(organizationId);
-    return this.segmentModel.find({ organizationId: orgObjId }).sort({ createdAt: -1 });
+    return this.segmentModel.find({ organizationId: orgObjId }).sort({ createdAt: -1 }).lean();
   }
 
   private buildFilterQuery(organizationId: string, filters: Array<{ field: string; attribute: string; value: string }>) {

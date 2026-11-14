@@ -48,4 +48,8 @@ export class Message {
 export const MessageSchema = SchemaFactory.createForClass(Message);
 MessageSchema.index({ organizationId: 1, metaMessageId: 1 });
 MessageSchema.index({ organizationId: 1, contactId: 1, timestamp: -1 });
+MessageSchema.index({ organizationId: 1, createdAt: -1 });
+MessageSchema.index({ organizationId: 1, status: 1 });
+MessageSchema.index({ organizationId: 1, direction: 1 });
+MessageSchema.index({ organizationId: 1, timestamp: -1 });
 

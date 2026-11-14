@@ -36,4 +36,5 @@ export class Invoice {
 }
 
 export const InvoiceSchema = SchemaFactory.createForClass(Invoice);
+InvoiceSchema.index({ organizationId: 1, createdAt: -1 });
 

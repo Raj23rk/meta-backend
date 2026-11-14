@@ -8,6 +8,7 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Membership, MembershipDocument } from '../../database/schemas/membership.schema';
+import { FastMemoryCache } from '../utils/cache.util';
 
 @Injectable()
 export class TenantGuard implements CanActivate {
@@ -44,11 +45,25 @@ export class TenantGuard implements CanActivate {
       throw new BadRequestException('Invalid Organization ID format');
     }
 
-    // Verify user belongs to this organization
-    const membership = await this.membershipModel.findOne({
-      organizationId: new Types.ObjectId(orgId),
-      userId: new Types.ObjectId(user.id || user._id),
-    });
+    const userId = user.id || user._id;
+    const cacheKey = `membership:${userId}:${orgId}`;
+    let membership: any = FastMemoryCache.get(cacheKey);
+
+    if (membership === null) {
+      membership = await this.membershipModel
+        .findOne({
+          organizationId: new Types.ObjectId(orgId),
+          userId: new Types.ObjectId(userId),
+        })
+        .lean();
+
+      // Cache result (or false if null) for 60s
+      FastMemoryCache.set(cacheKey, membership || false, 60000);
+    }
+
+    if (membership === false) {
+      membership = null;
+    }
 
     if (!membership && !user.isSuperAdmin) {
       throw new ForbiddenException('Access denied: You are not a member of this organization');

@@ -13,12 +13,14 @@ export class TemplatesService {
 
   async findAll(organizationId: string) {
     const orgObjId = new Types.ObjectId(organizationId);
-    return this.templateModel.find({ organizationId: orgObjId }).sort({ createdAt: -1 });
+    return this.templateModel.find({ organizationId: orgObjId }).sort({ createdAt: -1 }).lean();
   }
 
   async findOne(organizationId: string, id: string) {
     const orgObjId = new Types.ObjectId(organizationId);
-    const template = await this.templateModel.findOne({ _id: new Types.ObjectId(id), organizationId: orgObjId });
+    const template = await this.templateModel
+      .findOne({ _id: new Types.ObjectId(id), organizationId: orgObjId })
+      .lean();
     if (!template) {
       throw new NotFoundException('Template not found');
     }

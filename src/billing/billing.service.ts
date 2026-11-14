@@ -25,18 +25,23 @@ export class BillingService {
 
   async getBillingSummary(organizationId: string) {
     const orgObjId = new Types.ObjectId(organizationId);
-    const org = await this.orgModel.findById(orgObjId);
 
     const now = new Date();
     const currentPeriod = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
-    // Count messages by category this month
-    const totalOutbound = await this.messageModel.countDocuments({
-      organizationId: orgObjId,
-      direction: 'outbound',
-    });
+    // Execute organization lookup, outbound count, and invoices concurrently in parallel
+    const [org, totalOutbound, invoices] = await Promise.all([
+      this.orgModel.findById(orgObjId).lean() as Promise<any>,
+      this.messageModel.countDocuments({
+        organizationId: orgObjId,
+        direction: 'outbound',
+      }),
+      this.invoiceModel
+        .find({ organizationId: orgObjId })
+        .sort({ createdAt: -1 })
+        .lean(),
+    ]);
 
-    // In a real system, messages are tagged with category. We estimate based on template vs text.
     const marketingCount = Math.floor(totalOutbound * 0.7);
     const utilityCount = Math.floor(totalOutbound * 0.2);
     const authCount = Math.floor(totalOutbound * 0.05);
@@ -50,10 +55,6 @@ export class BillingService {
     ];
 
     const estimatedMetaCost = categoryBreakdown.reduce((sum, item) => sum + item.cost, 0);
-
-    const invoices = await this.invoiceModel
-      .find({ organizationId: orgObjId })
-      .sort({ createdAt: -1 });
 
     const quota = org?.settings?.monthlyQuota || 10000;
     const usagePercent = Math.min(100, Math.round((totalOutbound / quota) * 100));

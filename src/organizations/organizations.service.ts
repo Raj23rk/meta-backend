@@ -18,42 +18,59 @@ export class OrganizationsService {
   ) {}
 
   async findAll(): Promise<any[]> {
-    const orgs = await this.orgModel.find().sort({ createdAt: -1 }).lean();
-    
-    // Enrich with statistics
-    const enriched = await Promise.all(
-      orgs.map(async (org) => {
-        const [waba, contactsCount, messagesCount] = await Promise.all([
-          this.wabaModel.findOne({ organizationId: org._id }),
-          this.contactModel.countDocuments({ organizationId: org._id }),
-          this.messageModel.countDocuments({ organizationId: org._id }),
-        ]);
+    const orgs: any[] = await this.orgModel.find().sort({ createdAt: -1 }).lean();
+    if (orgs.length === 0) return [];
 
-        return {
-          ...org,
-          id: org._id.toString(),
-          wabaConnected: waba ? waba.connectionStatus === 'connected' : false,
-          wabaId: waba ? waba.wabaId : null,
-          contactsCount,
-          messagesCount,
-        };
-      }),
-    );
+    const orgIds = orgs.map((o) => o._id);
 
-    return enriched;
+    // Batch fetch all WABAs and counts in 3 parallel fast queries instead of 3xN queries
+    const [wabas, contactStats, messageStats] = await Promise.all([
+      this.wabaModel.find({ organizationId: { $in: orgIds } }).lean(),
+      this.contactModel.aggregate([
+        { $match: { organizationId: { $in: orgIds } } },
+        { $group: { _id: '$organizationId', count: { $sum: 1 } } },
+      ]),
+      this.messageModel.aggregate([
+        { $match: { organizationId: { $in: orgIds } } },
+        { $group: { _id: '$organizationId', count: { $sum: 1 } } },
+      ]),
+    ]);
+
+    const wabaMap = new Map<string, any>(wabas.map((w: any) => [w.organizationId.toString(), w]));
+    const contactCountMap = new Map<string, number>(contactStats.map((c: any) => [c._id.toString(), c.count]));
+    const messageCountMap = new Map<string, number>(messageStats.map((m: any) => [m._id.toString(), m.count]));
+
+    return orgs.map((org: any) => {
+      const orgIdStr = org._id.toString();
+      const waba = wabaMap.get(orgIdStr);
+      return {
+        ...org,
+        id: orgIdStr,
+        wabaConnected: waba ? waba.connectionStatus === 'connected' : false,
+        wabaId: waba ? waba.wabaId : null,
+        contactsCount: contactCountMap.get(orgIdStr) || 0,
+        messagesCount: messageCountMap.get(orgIdStr) || 0,
+      };
+    });
   }
 
   async findOne(id: string) {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid organization ID');
     }
-    const org = await this.orgModel.findById(id);
+
+    const orgObjId = new Types.ObjectId(id);
+    const [org, waba] = await Promise.all([
+      this.orgModel.findById(orgObjId).lean() as Promise<any>,
+      this.wabaModel.findOne({ organizationId: orgObjId }).lean() as Promise<any>,
+    ]);
+
     if (!org) {
       throw new NotFoundException('Organization not found');
     }
-    const waba = await this.wabaModel.findOne({ organizationId: org._id });
+
     return {
-      ...org.toObject(),
+      ...org,
       id: org._id.toString(),
       wabaConnected: waba ? waba.connectionStatus === 'connected' : false,
       wabaId: waba ? waba.wabaId : null,

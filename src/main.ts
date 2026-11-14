@@ -14,11 +14,13 @@ async function bootstrap() {
   // Set global API prefix
   app.setGlobalPrefix('api');
 
-  // Enable CORS
+  // Enable CORS with preflight caching
   app.enableCors({
     origin: '*',
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    allowedHeaders: 'Content-Type,Authorization,X-Organization-Id,Accept,Origin',
     credentials: true,
+    maxAge: 86400, // 24-hour cache for OPTIONS preflight requests
   });
 
   // Enable request payload validation
@@ -31,7 +33,11 @@ async function bootstrap() {
   );
 
   const port = process.env.PORT || 3000;
-  await app.listen(port);
+  const server = await app.listen(port);
+  if (server && typeof server.keepAliveTimeout !== 'undefined') {
+    server.keepAliveTimeout = 65000;
+    server.headersTimeout = 66000;
+  }
   logger.log(`WhatsApp SaaS Backend API is running on http://localhost:${port}/api`);
   logger.log(`Health check: http://localhost:${port}/api/health`);
 }
