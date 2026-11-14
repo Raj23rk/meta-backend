@@ -41,3 +41,4 @@ export class FastMemoryCache {
     this.store.clear();
   }
 }
+
